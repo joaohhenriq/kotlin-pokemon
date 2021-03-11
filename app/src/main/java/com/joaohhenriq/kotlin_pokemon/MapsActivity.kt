@@ -1,5 +1,6 @@
 package com.joaohhenriq.kotlin_pokemon
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
@@ -24,6 +25,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var mMap: GoogleMap
     var ACCESS_LOCATION = 123
     var location: Location? = null
+    var pokemonList = ArrayList<Pokemon>()
+    var oldLocation: Location? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,12 +38,20 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         mapFragment.getMapAsync(this)
 
         checkPermission()
+        loadPokemon()
     }
 
     private fun checkPermission() {
-        if(Build.VERSION.SDK_INT >= 23) {
-            if(ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION), ACCESS_LOCATION)
+        if (Build.VERSION.SDK_INT >= 23) {
+            if (ActivityCompat.checkSelfPermission(
+                    this,
+                    android.Manifest.permission.ACCESS_FINE_LOCATION
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                requestPermissions(
+                    arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
+                    ACCESS_LOCATION
+                )
                 return
             }
         }
@@ -48,6 +59,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         getUserLocation()
     }
 
+    @SuppressLint("MissingPermission")
     private fun getUserLocation() {
         Toast.makeText(this, "User location access on", Toast.LENGTH_LONG).show()
 
@@ -61,12 +73,16 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         myThread.start()
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        when(requestCode) {
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        when (requestCode) {
             ACCESS_LOCATION -> {
 
                 // nós pegamos o índice 0 pq passamos um fizemos o request de apenas uma permissão no checkPermission
-                if(grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     getUserLocation()
                 } else {
                     Toast.makeText(this, "We can't access your location", Toast.LENGTH_LONG).show()
@@ -81,7 +97,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         mMap = googleMap
     }
 
-    inner class MyLocationListener: LocationListener {
+    inner class MyLocationListener : LocationListener {
 
         constructor() {
             location = Location("Start")
@@ -100,27 +116,80 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
     }
 
-    inner class MyThread: Thread {
-        constructor():super() {
-
+    inner class MyThread : Thread {
+        constructor() : super() {
+            oldLocation = Location("Start")
+            oldLocation!!.longitude = 0.0
+            oldLocation!!.latitude = 0.0
         }
 
         override fun run() {
-            while(true) {
+            while (true) {
                 try {
-                    runOnUiThread{
-                        // Add a marker in Sydney and move the camera
+                    if(oldLocation!!.distanceTo(location) == 0f){
+                        continue
+                    }
+
+                    oldLocation = location
+
+                    runOnUiThread {
+                        mMap.clear()
+
+                        // ME
                         val position = LatLng(location!!.longitude, location!!.latitude)
-                        mMap.addMarker(MarkerOptions().position(position).title("Me").snippet("here is my location").icon(BitmapDescriptorFactory.fromResource(R.drawable.mario)))
+                        mMap.addMarker(
+                            MarkerOptions().position(position).title("Me")
+                                .snippet("here is my location")
+                                .icon(BitmapDescriptorFactory.fromResource(R.drawable.mario))
+                        )
                         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, 14f))
+
+                        // POKEMONS
+                        pokemonList.forEach{
+                            var newPokemon = it
+
+                            if(!newPokemon.isCatched) {
+                                val position = LatLng(newPokemon.lgn, newPokemon.lat)
+                                mMap.addMarker(
+                                    MarkerOptions().position(position).title(newPokemon.name)
+                                        .snippet(newPokemon.des)
+                                        .icon(BitmapDescriptorFactory.fromResource(newPokemon.image))
+                                )
+                                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, 14f))
+                            }
+                        }
                     }
 
                     Thread.sleep(20000)
-                } catch(e: Exception) {
+                } catch (e: Exception) {
 
                 }
             }
 
         }
+    }
+
+    fun loadPokemon() {
+        pokemonList.add(
+            Pokemon(
+                "Charmander",
+                "This is a pokemon",
+                R.drawable.charmander,
+                2.5,
+                -49.29528683,
+                -16.73896689
+            )
+        )
+
+        pokemonList.add(
+            Pokemon(
+                "Bulbasaur",
+                "This is a pokemon",
+                R.drawable.bulbasaur,
+                4.5,
+                -49.29528683,
+                -16.73896689
+            )
+        )
     }
 }
