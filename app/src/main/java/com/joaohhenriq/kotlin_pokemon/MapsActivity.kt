@@ -149,18 +149,23 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                             var newPokemon = it
 
                             if(!newPokemon.isCatched) {
-                                val position = LatLng(newPokemon.lgn, newPokemon.lat)
+                                val position = LatLng(newPokemon.location!!.longitude, newPokemon.location!!.latitude)
                                 mMap.addMarker(
                                     MarkerOptions().position(position).title(newPokemon.name)
                                         .snippet(newPokemon.des)
                                         .icon(BitmapDescriptorFactory.fromResource(newPokemon.image))
                                 )
                                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(position, 14f))
+
+                                if(location!!.distanceTo(newPokemon.location) < 2) {
+                                    newPokemon.isCatched = true
+                                    Toast.makeText(applicationContext, "You catch ${newPokemon.name}", Toast.LENGTH_LONG).show()
+                                }
                             }
                         }
                     }
 
-                    Thread.sleep(20000)
+                    Thread.sleep(1000)
                 } catch (e: Exception) {
 
                 }
